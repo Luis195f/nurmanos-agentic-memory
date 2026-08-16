@@ -1,0 +1,52 @@
+# Dependencies and package-manager state
+node_modules/
+.pnpm-store/
+
+# Environment variables and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.crt
+*.cer
+*.key
+*.p12
+*.pfx
+credentials*
+
+# AWS and infrastructure state
+.aws/
+.amplify/
+.serverless/
+.terraform/
+*.tfstate
+*.tfstate.*
+cdk.out/
+
+# Application and test output
+.next/
+out/
+dist/
+build/
+coverage/
+.turbo/
+*.tsbuildinfo
+
+# Logs and local runtime evidence
+*.log
+logs/
+evidence/raw/
+evidence/private/
+
+# Editor and operating-system files
+.idea/
+.vscode/
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.swp

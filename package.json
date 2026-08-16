@@ -1,0 +1,12 @@
+{
+  "name": "nurmanos-agentic-memory",
+  "version": "0.0.0",
+  "private": false,
+  "description": "H0 runtime and eligibility proof for the CockroachDB x AWS Build with Agentic Memory hackathon.",
+  "license": "MIT",
+  "engines": {
+    "node": "22.14.0",
+    "pnpm": "10.15.0"
+  },
+  "packageManager": "pnpm@10.15.0"
+}
