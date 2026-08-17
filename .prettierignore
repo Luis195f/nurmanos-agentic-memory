@@ -1,0 +1,6 @@
+dist
+coverage
+node_modules
+pnpm-lock.yaml
+docs/H0_RUNTIME_PROOF.md
+docs/HACKATHON_COMPLIANCE.md
