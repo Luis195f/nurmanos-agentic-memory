@@ -1,97 +1,127 @@
 # NurManOS Agentic Memory
 
-NurManOS Agentic Memory is an experimental public platform for persistent,
-synthetic operational memory. In the **Aurora Demo Unit — Synthetic Workspace**,
-Amazon Bedrock decides when to call a typed store or retrieve tool, Titan generates
-1,024-dimensional embeddings, and CockroachDB performs durable namespace-isolated
-vector recall.
+**NurManOS Agentic Memory v0.1.0 — Local Synthetic Demo** is a free,
+browser-only demonstration of persistent operational memory. It stores fictional
+lessons in this browser, retrieves them with deterministic textual matching, and
+keeps them across reloads and new conversations.
+
+> Modo demo local — los datos permanecen únicamente en este navegador. AWS y
+> CockroachDB están desactivados.
 
 It is a technical demonstration, not a medical device, clinical decision-support
-system, or healthcare-production service. Use fictional data only.
+system, healthcare-production service, or real AI deployment. Use fictional data
+only.
 
-## What the vertical slice proves
+## Available now
 
-1. A user records an invented operational lesson.
-2. Nova Micro autonomously selects the bounded `store_supervisor_memory` tool.
-3. The runtime validates the tool input, rejects likely personal data, embeds the
-   lesson with Titan V2, and transactionally upserts strict synthetic metadata.
-4. In a new conversation, the user asks a semantic question.
-5. Nova selects `retrieve_supervisor_memories`; CockroachDB applies a
-   session-prefixed cosine vector index and Nova grounds its answer in returned keys.
-6. The UI exposes sanitized operation, outcome, category, key, count, similarity,
-   duration, and persistence evidence without revealing internal prompts or secrets.
+- A functional Spanish-first local application with English available.
+- Synthetic examples and conservative likely-personal-data rejection.
+- Versioned `localStorage` persistence scoped by anonymous workspace UUID.
+- Idempotent upsert by memory key, deterministic textual retrieval, new
+  conversations, and one-click restoration of the initial examples.
+- A strict local CSP and no external request from `local-demo` runtime.
+- AWS backend code, CloudFormation, and CockroachDB migrations retained for future
+  explicitly authorized use.
+- Public CI and H0 hackathon material retained as historical evidence.
+
+## Not deployed now
+
+- H1 Lambda, API Gateway, Amplify, or public backend.
+- Production Bedrock execution or embedding generation.
+- H1 CockroachDB runtime access.
+- Public end-to-end deployment.
+
+This is a deliberate cost-avoidance decision, not an abandoned implementation.
+The AWS adapter is never selected automatically and local startup does not depend
+on AWS, Bedrock, or CockroachDB.
+
+## Run locally on Windows PowerShell
+
+Requirements: Node.js `22.14.0` and pnpm `10.15.0`.
+
+```powershell
+Set-Location "C:\Users\luism\source\repos\nurmanos-agentic-memory"
+corepack enable
+pnpm install --frozen-lockfile
+if (-not (Test-Path -LiteralPath ".env.local")) {
+  Copy-Item .env.local.example .env.local
+}
+pnpm dev:local
+```
+
+Open `http://127.0.0.1:5173`. If Vite reports another port because 5173 is busy,
+open the exact URL it prints.
+
+To stop the server:
+
+```text
+Ctrl+C
+```
+
+`.env.local` remains ignored by Git. If it already exists, do not print it or
+overwrite it; ensure only that `VITE_APP_MODE=local-demo` is configured. Never put
+credentials, hosts, passwords, certificates, or account identifiers in a `VITE_*`
+variable.
+
+## Try the complete local journey
+
+1. Select **Recordar una lección de hidratación** and send it.
+2. Reload the browser or select **Nueva conversación**.
+3. Select **Preguntar por hidratación** and send it.
+4. Inspect the grounded memory key and sanitized local activity receipt.
+5. Select **Restaurar ejemplos** to remove custom memories only from the current
+   local workspace and restore its original synthetic examples.
+
+The similarity percentage is deterministic textual overlap. It is not an
+embedding or vector-search result.
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-  U["Anonymous demo user"] --> A["AWS Amplify"]
-  A --> G["API Gateway"]
-  G --> L["Lambda bounded agent"]
-  L --> B["Amazon Bedrock"]
-  L --> C["CockroachDB Cloud"]
-  S["Secrets Manager"] --> L
-  L --> W["CloudWatch"]
+  U["Local browser user"] --> V["React and Vite UI"]
+  V --> R["Deterministic local rules"]
+  R --> S["Versioned browser localStorage"]
+  R --> T["Textual overlap retrieval"]
+  X["No external runtime requests"] -.-> V
 ```
 
-The Lambda allows one tool operation and at most two model turns. Exact CORS,
-strict schemas, runtime-owned UUID namespaces, parameterized SQL, TLS, timeouts,
-throttling, reserved concurrency, least-privilege IAM, generic errors, seven-day
-sanitized logs, and alarms keep the demo bounded. See
-[Architecture](docs/ARCHITECTURE.md) and [Security](docs/SECURITY.md).
-
-## Local development
-
-Requirements: Node.js `22.14.0` and pnpm `10.15.0`.
-
-```bash
-pnpm install --frozen-lockfile
-pnpm check
-```
-
-Copy `.env.example` to `.env.local` and provide only a public API origin:
-
-```dotenv
-VITE_API_BASE_URL=https://example.execute-api.eu-west-1.amazonaws.com
-```
-
-Then run `pnpm dev`. Development adds only the inline-style permission Vite needs;
-the production CSP remains strict. No credential belongs in a `VITE_*` variable.
+The local and AWS adapters share the validated request/response contract but are
+implemented separately. Future AWS mode requires the explicit `aws` setting and a
+public API origin. It is documented for later review; it is not the current
+release runtime. See [Architecture](docs/ARCHITECTURE.md) and
+[Deployment hold](docs/DEPLOYMENT.md).
 
 ## Verification
 
-```bash
-pnpm check
+```powershell
+pnpm format:check
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm build
 pnpm audit --prod --audit-level high
 pnpm security:scan
 pnpm audit:public
 git diff --check
 ```
 
-The test suite covers strict contracts, extra-field rejection, personal-data
-patterns, tool allowlisting and rounds, model stop transitions, runtime namespace
-ownership, migrations, infrastructure boundaries, sanitized handlers, and the UI.
-The public E2E probe is described in [Deployment](docs/DEPLOYMENT.md).
+The suite covers strict backend contracts as well as local no-network execution,
+persistence, reload, conversation continuity, idempotent upsert, workspace
+isolation, reset, disclosure, CSP, and sanitized evidence. The Lambda bundle is
+built but never deployed.
 
-## Database and deployment
-
-The schema is in `infra/sql`. New environments apply `001`, configured grants in
-`002`, then strict synthetic hardening in `003`; upgrades must run the preflight in
-[Release proof](docs/RELEASE_PROOF.md). AWS runtime infrastructure is declarative in
-`infra/template.yaml`. See [Deployment](docs/DEPLOYMENT.md) and
-[Operations runbook](docs/RUNBOOK.md) for reproducible steps and rollback.
-
-## Safety and product status
+## Safety and historical status
 
 Read the [synthetic data boundary](docs/DATA_BOUNDARY.md) before using the demo.
-The [threat model](docs/THREAT_MODEL.md) documents anonymous-workspace, public-abuse,
-and accidental-data risks. [Pilot readiness](docs/PILOT_READINESS.md) lists the
-identity, DPIA, legal, clinical-governance, DPO, pentest, audit, retention, backup,
-and validation gates required before any professional healthcare pilot.
+The [threat model](docs/THREAT_MODEL.md) and
+[pilot readiness](docs/PILOT_READINESS.md) make clear that no professional
+healthcare use is authorized.
 
-H0 hackathon evidence is retained only as history in
-[H0 runtime proof](docs/H0_RUNTIME_PROOF.md) and
-[hackathon compliance](docs/HACKATHON_COMPLIANCE.md). It is not the product roadmap.
+H0 and the former hackathon documentation are preserved solely as historical
+evidence in [H0 runtime proof](docs/H0_RUNTIME_PROOF.md) and
+[hackathon compliance](docs/HACKATHON_COMPLIANCE.md). They do not describe the
+current local runtime or a production roadmap.
 
 ## Documentation
 
@@ -99,8 +129,8 @@ H0 hackathon evidence is retained only as history in
 - [Security](docs/SECURITY.md)
 - [Threat model](docs/THREAT_MODEL.md)
 - [Synthetic data boundary](docs/DATA_BOUNDARY.md)
-- [Deployment](docs/DEPLOYMENT.md)
-- [Runbook](docs/RUNBOOK.md)
+- [Deployment hold](docs/DEPLOYMENT.md)
+- [Operations runbook](docs/RUNBOOK.md)
 - [Release proof](docs/RELEASE_PROOF.md)
 - [Roadmap](docs/ROADMAP.md)
 - [Pilot readiness](docs/PILOT_READINESS.md)

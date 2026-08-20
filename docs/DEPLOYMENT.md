@@ -1,4 +1,16 @@
-# Reproducible deployment
+# Deployment hold and future procedure
+
+## Current decision
+
+H1 is intentionally **not deployed**. Do not create or update CloudFormation,
+Lambda, API Gateway, Amplify, Bedrock, Secrets Manager, SSM, CloudWatch, or other
+AWS resources for v0.1.0. Do not query or write CockroachDB Cloud for the local
+demo. This hold is a conscious zero-new-cost decision, not an abandoned backend.
+
+Run the supported local runtime with `pnpm dev:local`; it uses browser
+`localStorage`, deterministic textual matching, and no external network request.
+
+Everything below is retained only as a future, explicitly authorized procedure.
 
 ## Prerequisites
 
@@ -8,7 +20,7 @@
 - CockroachDB Cloud access and a dedicated runtime role.
 - No production secret in shell history, source, build arguments, or `VITE_*`.
 
-## Validate and build
+## Validate and build the prepared code
 
 ```bash
 pnpm install --frozen-lockfile
@@ -20,9 +32,11 @@ git diff --check
 ```
 
 The outputs are `dist/frontend` and `dist/lambda/index.js`; no `.map` file should
-exist. The only browser configuration is the public API origin:
+exist. Local mode uses `VITE_APP_MODE=local-demo`. A future AWS build must be
+selected explicitly and would use:
 
 ```dotenv
+VITE_APP_MODE=aws
 VITE_API_BASE_URL=https://example.execute-api.eu-west-1.amazonaws.com
 ```
 

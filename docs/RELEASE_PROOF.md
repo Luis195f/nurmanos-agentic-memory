@@ -1,4 +1,4 @@
-# v0.1.0 release proof
+# v0.1.0 local synthetic demo release proof
 
 This file contains sanitized, reproducible evidence only. It must not contain
 credentials, connection strings, account IDs, hostnames, vectors, full prompts,
@@ -11,6 +11,19 @@ memory content, or raw provider responses.
 - H0 historical commit on `main`: `ce56ae5ccffb7c56b77e2e30a56b1e9bd0e5e21a`.
 - Safe H1 hardening checkpoint: `6f9970d`.
 - License: MIT.
+
+## Zero-cost runtime decision
+
+- Release title: `NurManOS Agentic Memory v0.1.0 — Local Synthetic Demo`.
+- H1 AWS deployment: intentionally not created or updated.
+- Local runtime: browser-only `localStorage` plus deterministic textual overlap.
+- External runtime calls in `local-demo`: none; an automated fetch spy verifies it.
+- AWS adapter: retained for future explicit activation and never selected
+  automatically.
+- CockroachDB evidence below is historical, sanitized pre-release evidence. No
+  CockroachDB query or write was performed while finalizing local-demo.
+- Incremental cloud cost caused by this release: EUR 0.00 expected; normal local
+  electricity and internet access are outside repository control.
 
 ## CockroachDB preflight
 
@@ -46,33 +59,35 @@ migration, use managed backup/restore.
 
 ## Local release-candidate verification
 
-- `pnpm install --frozen-lockfile`: lockfile current, no packages downloaded.
+- `pnpm install --frozen-lockfile`: lockfile current; `0` packages downloaded.
 - Prettier: all files matched.
 - ESLint: passed with zero findings.
 - TypeScript: passed with zero errors.
-- Vitest: `10` files, `34` tests passed.
-- Vite: `1,896` modules; JS `281.19 kB` (`85.80 kB` gzip), CSS
-  `10.73 kB` (`3.17 kB` gzip), HTML `0.86 kB` (`0.46 kB` gzip).
+- Vitest: `11` files, `41` tests passed.
+- Local-mode coverage includes no network/AWS/Bedrock/Cockroach execution,
+  store/reload/retrieve, new-conversation continuity, idempotent upsert, workspace
+  isolation, local reset, disclosure, likely-personal-data rejection, and CSP.
+- Vite local-demo build: `1,898` modules; JS approximately `292.4 kB`
+  (`89.4 kB` gzip), CSS `11.18 kB` (`3.24 kB` gzip), HTML `0.86 kB`.
 - Lambda: one Node.js 22 CJS bundle, `1.9 MB`; no source map.
 - Production dependency audit: no known vulnerabilities.
 - Secret scan: working tree `0`; complete Git history `0` high-confidence matches.
-- Public artifact audit: `5` current files checked; `0` findings and no stale hashed assets.
+- Public artifact audit: `6` current files checked; `0` findings and no stale hashed assets.
 - `git diff --check`: passed; line-ending notices are informational on Windows.
-- UI audit: production preview at 1,440×1,000 and 390×844, English and Spanish,
-  semantic DOM, keyboard focus indicator, reduced-motion rule, empty/offline states,
-  and 44 px interactive targets verified. The public API flow remains a deployment gate.
+- Production CSP: `connect-src 'self'` with no configured external API origin.
+- Chrome local E2E: Spanish disclosure visible; store, reload, new conversation,
+  grounded textual retrieval, and idempotent update passed; no console warning or
+  error was recorded. Final reset is repeated after synchronizing `main`.
+- Final GitHub commit/CI references are recorded after the release candidate is
+  merged.
 
-## Deployment and public E2E
+## Deliberately unavailable in v0.1.0
 
-To be filled only from the deployed stack and unauthenticated browser journey:
+- No public frontend or API URL.
+- No H1 CloudFormation, Lambda, API Gateway, Amplify, Bedrock, or CockroachDB E2E.
+- No claim of production readiness, AI execution, embedding generation, or vector
+  retrieval in local mode.
 
-- final frontend/API origins;
-- sanitized CloudFormation resources and health status;
-- migration 003 postflight constraints/indexes;
-- synthetic store/update/retrieve request IDs and keys;
-- namespace-isolation result;
-- Bedrock tool transition and vector-index evidence;
-- HTTP, CORS, CSP, security headers, mobile/desktop, keyboard, and failure checks;
-- explicitly removed temporary keys and retained demo keys.
-
-Release status remains pre-release until these fields and GitHub CI are verified.
+The missing public E2E is an accepted `NO-GO` chosen to avoid new cloud cost. The
+release becomes GO only for the local synthetic demonstration after GitHub CI,
+merge, release publication, and a real local Chrome journey succeed.

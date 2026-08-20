@@ -1,7 +1,27 @@
 # Architecture
 
-NurManOS Agentic Memory is a deliberately small, internet-facing technical demo
-for synthetic operational lessons. It is not a clinical system.
+NurManOS Agentic Memory v0.1.0 runs as a browser-only local synthetic demo. It is
+not an internet-facing deployment or a clinical system.
+
+## Current local runtime
+
+```mermaid
+flowchart LR
+  U["Local browser user"] --> UI["React UI"]
+  UI --> A["Local demo adapter"]
+  A --> V["Strict shared validation"]
+  V --> S["Versioned localStorage by workspace"]
+  V --> R["Deterministic textual overlap"]
+```
+
+The local adapter does not initialize the AWS adapter and does not call `fetch`.
+Memories are validated when loaded because browser storage is untrusted. Stable
+keys provide idempotent updates; opaque workspace UUIDs prevent accidental mixing.
+Reset replaces only the selected local workspace with the curated synthetic seeds.
+
+## Prepared future AWS architecture
+
+The following architecture remains in source but is not deployed in v0.1.0:
 
 ```mermaid
 flowchart LR
@@ -15,7 +35,7 @@ flowchart LR
   L --> W
 ```
 
-## Runtime flow
+## Future AWS runtime flow
 
 1. The browser creates an opaque UUID workspace and retains it in local storage.
 2. API Gateway accepts only `GET /api/health` and `POST /api/agent`, applies an
@@ -58,7 +78,7 @@ Metadata must contain the JSON boolean `"synthetic": true`.
 
 ## Build and delivery
 
-Vite emits the static frontend and esbuild emits one Node.js 22 Lambda file with
-no source map. CloudFormation owns the runtime role, Lambda, HTTP API, log groups,
-alarms, and limits. GitHub Actions runs deterministic validation but has no cloud
-credentials and cannot deploy. Runtime secrets stay in Secrets Manager.
+Vite currently emits a `local-demo` frontend and esbuild still verifies one Node.js
+22 Lambda file with no source map. CloudFormation is source-only. GitHub Actions
+runs deterministic validation but has no cloud credentials and cannot deploy.
+Future AWS activation must be explicit, separately approved, and cost-reviewed.

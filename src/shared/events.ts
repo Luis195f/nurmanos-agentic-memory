@@ -6,6 +6,7 @@ const SAFE_LABELS: Record<ActivityEvent["type"], string> = {
   embedding_created: "Titan created a 1,024-dimensional embedding",
   memory_stored: "CockroachDB committed the synthetic memory",
   vector_retrieval: "CockroachDB executed vector retrieval",
+  local_text_retrieval: "Browser storage executed textual retrieval",
   final_response: "Bedrock returned a grounded final response",
 };
 

@@ -60,6 +60,7 @@ export const activityEventSchema = z
       "embedding_created",
       "memory_stored",
       "vector_retrieval",
+      "local_text_retrieval",
       "final_response",
     ]),
     label: z.string().max(120),

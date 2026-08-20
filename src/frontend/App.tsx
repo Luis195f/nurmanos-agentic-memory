@@ -17,21 +17,35 @@ import {
 import { useEffect, useMemo, useState } from "react";
 
 import { agentResponseSchema, type ActivityEvent } from "../shared/contracts";
+import {
+  createMemoryClient,
+  type AppMode,
+  type ServiceHealth,
+} from "./memory-client";
 
 const API_BASE_URL = (
   import.meta.env.VITE_API_BASE_URL as string | undefined
 )?.replace(/\/$/, "");
+const ENV_APP_MODE = import.meta.env.VITE_APP_MODE as AppMode | undefined;
 const SESSION_STORAGE_KEY = "nurmanos-h1-anonymous-session";
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 type Language = "en" | "es";
 
+export interface AppProps {
+  appMode?: AppMode;
+  apiBaseUrl?: string;
+}
+
 const COPY = {
   en: {
     statusChecking: "Checking memory service",
     statusOnline: "Memory service online",
     statusOffline: "Memory service unavailable",
+    statusLocal: "Local demo active",
+    localDisclosure:
+      "Local demo mode — data remains only in this browser. AWS and CockroachDB are disabled.",
     eyebrow: "Aurora Demo Unit · Synthetic workspace",
     title: "Turn operational lessons into shared memory.",
     intro:
@@ -46,6 +60,8 @@ const COPY = {
     receiptAria: "Sanitized activity receipt",
     agentTitle: "Operational memory agent",
     newConversation: "New conversation",
+    resetDemo: "Restore demo examples",
+    resetConfirmed: "Synthetic local examples restored.",
     emptyTitle: "What should Aurora remember?",
     emptyBody:
       "Choose a safe example or write one fictional operational lesson below.",
@@ -77,7 +93,10 @@ const COPY = {
     technicalHide: "Hide technical evidence",
     decision: "Decision",
     persistentMemory: "Persistent memory",
-    semanticSignal: "Semantic search",
+    semanticSignal: "Retrieval method",
+    localDecision: "Deterministic local rules",
+    localPersistence: "Browser localStorage",
+    localSearch: "Text matching (not vector search)",
     persistenceTitle: "Persistence confirmed",
     persistenceBody:
       "This browser workspace survives refreshes and new conversations.",
@@ -95,18 +114,22 @@ const COPY = {
     footerSecondary: "Fictional environment · Aurora Demo Unit",
     languageAction: "Cambiar a español",
     eventLabels: {
-      tool_requested: "The agent selected a typed memory tool",
-      input_validated: "Tool input passed the synthetic-data contract",
-      embedding_created: "Titan created a 1,024-dimensional embedding",
-      memory_stored: "CockroachDB committed the synthetic memory",
-      vector_retrieval: "CockroachDB ranked memories by vector similarity",
-      final_response: "Nova returned a grounded response",
+      tool_requested: "A bounded memory operation was selected",
+      input_validated: "Input passed the synthetic-data contract",
+      embedding_created: "The configured service created an embedding",
+      memory_stored: "The configured store committed the synthetic memory",
+      vector_retrieval: "The configured service ranked vector results",
+      local_text_retrieval: "Browser memories were ranked by textual overlap",
+      final_response: "A grounded response was returned",
     },
   },
   es: {
     statusChecking: "Comprobando el servicio de memoria",
     statusOnline: "Servicio de memoria disponible",
     statusOffline: "Servicio de memoria no disponible",
+    statusLocal: "Demo local activa",
+    localDisclosure:
+      "Modo demo local — los datos permanecen únicamente en este navegador. AWS y CockroachDB están desactivados.",
     eyebrow: "Aurora Demo Unit · Espacio sintético",
     title: "Convierte las lecciones operativas en memoria compartida.",
     intro:
@@ -121,6 +144,8 @@ const COPY = {
     receiptAria: "Recibo sanitizado de actividad",
     agentTitle: "Agente de memoria operativa",
     newConversation: "Nueva conversación",
+    resetDemo: "Restaurar ejemplos",
+    resetConfirmed: "Ejemplos sintéticos locales restaurados.",
     emptyTitle: "¿Qué debe recordar Aurora?",
     emptyBody:
       "Elige un ejemplo seguro o escribe abajo una única lección operativa ficticia.",
@@ -153,7 +178,10 @@ const COPY = {
     technicalHide: "Ocultar evidencia técnica",
     decision: "Decisión",
     persistentMemory: "Memoria persistente",
-    semanticSignal: "Búsqueda semántica",
+    semanticSignal: "Método de recuperación",
+    localDecision: "Reglas locales deterministas",
+    localPersistence: "localStorage del navegador",
+    localSearch: "Coincidencia textual (no vectorial)",
     persistenceTitle: "Persistencia confirmada",
     persistenceBody:
       "Este espacio del navegador sobrevive a recargas y conversaciones nuevas.",
@@ -171,12 +199,14 @@ const COPY = {
     footerSecondary: "Entorno ficticio · Aurora Demo Unit",
     languageAction: "Switch to English",
     eventLabels: {
-      tool_requested: "El agente seleccionó una herramienta de memoria tipada",
+      tool_requested: "Se seleccionó una operación de memoria acotada",
       input_validated: "La entrada superó el contrato de datos sintéticos",
-      embedding_created: "Titan creó una representación de 1.024 dimensiones",
-      memory_stored: "CockroachDB confirmó la memoria sintética",
-      vector_retrieval: "CockroachDB ordenó memorias por similitud vectorial",
-      final_response: "Nova devolvió una respuesta fundamentada",
+      embedding_created: "El servicio configurado creó una representación",
+      memory_stored: "El almacén configurado confirmó la memoria sintética",
+      vector_retrieval: "El servicio configurado ordenó resultados vectoriales",
+      local_text_retrieval:
+        "Las memorias del navegador se ordenaron por coincidencia textual",
+      final_response: "Se devolvió una respuesta fundamentada",
     },
   },
 } as const;
@@ -199,80 +229,67 @@ function outcomeEvent(events: ActivityEvent[]): ActivityEvent | undefined {
   return [...events].reverse().find((event) => event.outcome);
 }
 
-export function App() {
+function configuredMode(): AppMode {
+  if (ENV_APP_MODE === "local-demo" || import.meta.env.MODE === "local-demo") {
+    return "local-demo";
+  }
+  return ENV_APP_MODE === "aws" ? "aws" : "disabled";
+}
+
+export function App({
+  appMode = configuredMode(),
+  apiBaseUrl = API_BASE_URL,
+}: AppProps) {
   const session = useMemo(sessionId, []);
-  const [language, setLanguage] = useState<Language>("en");
+  const client = useMemo(
+    () => createMemoryClient(appMode, apiBaseUrl),
+    [apiBaseUrl, appMode],
+  );
+  const [language, setLanguage] = useState<Language>(
+    appMode === "local-demo" ? "es" : "en",
+  );
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [events, setEvents] = useState<ActivityEvent[]>([]);
   const [showTechnical, setShowTechnical] = useState(false);
-  const [health, setHealth] = useState<"checking" | "online" | "offline">(
-    "checking",
-  );
+  const [health, setHealth] = useState<ServiceHealth | "checking">("checking");
   const [status, setStatus] = useState<
     "idle" | "loading" | "success" | "error"
   >("idle");
   const [error, setError] = useState("");
   const copy = COPY[language];
   const receipt = outcomeEvent(events);
+  const isLocalDemo = client.mode === "local-demo";
 
   useEffect(() => {
-    if (!API_BASE_URL) {
-      setHealth("offline");
-      return;
-    }
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 4_000);
-    void fetch(`${API_BASE_URL}/api/health`, {
-      signal: controller.signal,
-      headers: { accept: "application/json" },
-    })
-      .then((response) => setHealth(response.ok ? "online" : "offline"))
+    void client
+      .checkHealth(controller.signal)
+      .then(setHealth)
       .catch(() => setHealth("offline"))
       .finally(() => window.clearTimeout(timeout));
     return () => {
       controller.abort();
       window.clearTimeout(timeout);
     };
-  }, []);
+  }, [client]);
 
   async function submit(message: string) {
     const normalized = message.trim();
     if (!normalized || status === "loading") return;
-    if (!API_BASE_URL) {
-      setStatus("error");
-      setError(
-        language === "es"
-          ? "El endpoint público del agente no está configurado."
-          : "The public agent endpoint is not configured.",
-      );
-      return;
-    }
     setDraft("");
     setError("");
     setStatus("loading");
     setMessages((current) => [...current, { role: "user", text: normalized }]);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/agent`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
+      const result = agentResponseSchema.parse(
+        await client.submit({
           sessionId: session,
           message: normalized,
           syntheticDataConfirmed: true,
         }),
-      });
-      const payload: unknown = await response.json();
-      if (!response.ok) {
-        const publicError =
-          typeof payload === "object" && payload !== null && "error" in payload
-            ? String(payload.error)
-            : language === "es"
-              ? "No se pudo completar la solicitud de memoria sintética."
-              : "The synthetic memory request could not be completed.";
-        throw new Error(publicError);
-      }
-      const result = agentResponseSchema.parse(payload);
+      );
       setMessages((current) => [
         ...current,
         { role: "agent", text: result.answer, memoryKeys: result.memoryKeys },
@@ -299,6 +316,13 @@ export function App() {
     setDraft("");
   }
 
+  function resetDemo() {
+    client.resetDemo?.(session);
+    startNewConversation();
+    setStatus("success");
+    setMessages([{ role: "agent", text: copy.resetConfirmed }]);
+  }
+
   function operationLabel(operation: ActivityEvent["operation"]): string {
     return operation === "store" ? copy.operationStore : copy.operationRetrieve;
   }
@@ -310,11 +334,13 @@ export function App() {
   }
 
   const healthLabel =
-    health === "online"
-      ? copy.statusOnline
-      : health === "offline"
-        ? copy.statusOffline
-        : copy.statusChecking;
+    health === "local"
+      ? copy.statusLocal
+      : health === "online"
+        ? copy.statusOnline
+        : health === "offline"
+          ? copy.statusOffline
+          : copy.statusChecking;
 
   return (
     <main>
@@ -336,7 +362,7 @@ export function App() {
             {language === "en" ? "ES" : "EN"}
           </button>
           <div className={`system-state ${health}`} role="status">
-            {health === "online" ? (
+            {health === "online" || health === "local" ? (
               <Wifi size={15} aria-hidden="true" />
             ) : (
               <WifiOff size={15} aria-hidden="true" />
@@ -350,6 +376,12 @@ export function App() {
         <div className="eyebrow">{copy.eyebrow}</div>
         <h1>{copy.title}</h1>
         <p className="hero-copy">{copy.intro}</p>
+        {isLocalDemo && (
+          <div className="local-disclosure" role="status">
+            <Database size={20} aria-hidden="true" />
+            <strong>{copy.localDisclosure}</strong>
+          </div>
+        )}
         <div className="safety-callout" role="note">
           <ShieldCheck size={20} aria-hidden="true" />
           <div>
@@ -366,14 +398,26 @@ export function App() {
               <p className="kicker">{copy.conversation}</p>
               <h2>{copy.agentTitle}</h2>
             </div>
-            <button
-              className="text-button"
-              type="button"
-              onClick={startNewConversation}
-            >
-              <Plus size={16} aria-hidden="true" />
-              {copy.newConversation}
-            </button>
+            <div className="conversation-actions">
+              <button
+                className="text-button"
+                type="button"
+                onClick={startNewConversation}
+              >
+                <Plus size={16} aria-hidden="true" />
+                {copy.newConversation}
+              </button>
+              {isLocalDemo && (
+                <button
+                  className="text-button"
+                  type="button"
+                  onClick={resetDemo}
+                >
+                  <RotateCcw size={16} aria-hidden="true" />
+                  {copy.resetDemo}
+                </button>
+              )}
+            </div>
           </div>
 
           <div
@@ -560,15 +604,21 @@ export function App() {
               <div className="activity-summary">
                 <div>
                   <span>{copy.decision}</span>
-                  <strong>Amazon Bedrock Nova</strong>
+                  <strong>
+                    {isLocalDemo ? copy.localDecision : "Amazon Bedrock Nova"}
+                  </strong>
                 </div>
                 <div>
                   <span>{copy.persistentMemory}</span>
-                  <strong>CockroachDB</strong>
+                  <strong>
+                    {isLocalDemo ? copy.localPersistence : "CockroachDB"}
+                  </strong>
                 </div>
                 <div>
                   <span>{copy.semanticSignal}</span>
-                  <strong>Titan V2 · 1,024d</strong>
+                  <strong>
+                    {isLocalDemo ? copy.localSearch : "Titan V2 · 1,024d"}
+                  </strong>
                 </div>
               </div>
               {events.length > 0 && (

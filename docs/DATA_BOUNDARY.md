@@ -20,11 +20,15 @@ telephone, identifier, and record-like inputs, but they are not a DLP system.
 
 ## Storage and observability
 
-CockroachDB stores the bounded synthetic content, embedding, category, opaque
-workspace UUID, stable memory key, strict synthetic metadata, and timestamps.
-CloudWatch receives request IDs, event types, categories, result counts, durations,
-and outcomes only. It must never receive full prompts, memory content, embeddings,
-SQL, credentials, hostnames, or model reasoning.
+In the current local demo, the browser stores bounded synthetic content, category,
+opaque workspace UUID, and stable memory key in versioned `localStorage`. Nothing
+is sent to AWS or CockroachDB. Browser storage is validated before use and can be
+restored from the interface, but it is not encrypted or suitable for real data.
+
+The prepared future backend would store bounded synthetic content and embeddings
+in CockroachDB and send sanitized operational fields to CloudWatch. It is not
+active in v0.1.0. Full prompts, memory content, embeddings, SQL, credentials,
+hostnames, and model reasoning must never be logged.
 
 The anonymous workspace UUID is a bearer namespace, not authentication. Anyone
 who obtains it may address that synthetic workspace. This is acceptable only for
@@ -32,7 +36,8 @@ the public synthetic demo and must be replaced before any professional pilot.
 
 ## Retention
 
-Demo memory has no automated expiry in v0.1.0. Operators may remove explicitly
-identified synthetic test rows. CloudWatch log retention is seven days. A pilot
-requires an approved retention schedule, deletion workflow, subject-rights process,
-and verified backups before accepting any regulated data.
+Local demo memory has no automated expiry in v0.1.0. The user can replace only the
+current workspace with curated synthetic seeds using **Restaurar ejemplos**, or
+clear site data through the browser. A pilot requires an approved retention
+schedule, deletion workflow, subject-rights process, and verified backups before
+accepting any regulated data.
