@@ -36,6 +36,8 @@ constraint first, verify it, then drop the legacy constraint through `003`.
 Recovery: H1 is isolated from H0. Before a non-empty migration, capture sanitized
 counts and use managed backup/restore. The strict constraint can be removed as a
 forward recovery only after writes are stopped and the incident is understood.
+Both clean install and upgrade require explicit metadata; no default may label
+unknown input as synthetic.
 
 ## Lambda and API
 

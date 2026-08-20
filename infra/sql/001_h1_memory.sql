@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS public.h1_supervisor_memories (
   content STRING NOT NULL CHECK (length(content) BETWEEN 8 AND 500),
   category STRING NOT NULL CHECK (category IN ('handover', 'family-communication', 'equipment-readiness', 'learning-review')),
   embedding VECTOR(1024) NOT NULL,
-  metadata JSONB NOT NULL DEFAULT '{"synthetic": true}'::JSONB,
+  metadata JSONB NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   CONSTRAINT h1_session_memory_key_unique UNIQUE (session_id, memory_key),

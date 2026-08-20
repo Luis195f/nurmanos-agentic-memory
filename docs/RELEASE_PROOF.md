@@ -27,8 +27,9 @@ memory content, or raw provider responses.
   unique `(session_id, memory_key)` arbiter for the transactional upsert.
 
 Recovery before migration: because H1 is empty, no H1 row recovery is required;
-add the strict constraint before removing the legacy constraint. H0 remains in its
-independent table. For any future non-empty migration, use managed backup/restore.
+add the strict constraint and remove the permissive column default before removing
+the legacy constraint. H0 remains in its independent table. For any future non-empty
+migration, use managed backup/restore.
 
 ## Local release-candidate verification
 

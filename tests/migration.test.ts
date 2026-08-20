@@ -15,12 +15,14 @@ describe("H1 migration", () => {
     expect(sql).toContain("UNIQUE (session_id, memory_key)");
     expect(sql).toContain("CREATE VECTOR INDEX");
     expect(sql).toContain("IS TRUE");
+    expect(sql).not.toMatch(/metadata JSONB NOT NULL DEFAULT/i);
     expect(sql).not.toContain("h0_agent_memories (");
   });
 
   it("hardens existing H1 tables without an enforcement gap", () => {
     expect(hardeningSql).toContain("ADD CONSTRAINT h1_synthetic_required");
     expect(hardeningSql).toContain("IS TRUE");
+    expect(hardeningSql).toContain("ALTER COLUMN metadata DROP DEFAULT");
     expect(hardeningSql.indexOf("ADD CONSTRAINT")).toBeLessThan(
       hardeningSql.indexOf("DROP CONSTRAINT"),
     );
