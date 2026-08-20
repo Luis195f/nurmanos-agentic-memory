@@ -31,6 +31,19 @@ add the strict constraint and remove the permissive column default before removi
 the legacy constraint. H0 remains in its independent table. For any future non-empty
 migration, use managed backup/restore.
 
+## CockroachDB migration 003 postflight
+
+- Applied to `defaultdb` on 2026-08-20 through the authenticated Cloud SQL shell,
+  one statement per transaction: strict constraint (`30 ms`), metadata default
+  removal (`30 ms`), and legacy constraint removal (`40 ms`).
+- `h1_synthetic_required` is validated and is the only synthetic-metadata check.
+- The live `metadata` column is `JSONB NOT NULL` with no default.
+- All primary, unique, length, category, and synthetic constraints are validated.
+- UUID, `VECTOR(1024)`, JSONB, timestamps, unique namespace/key, global L2 vector,
+  and session-prefixed cosine vector indexes are present.
+- H1 postflight remains `0` rows and all five synthetic-boundary exception counts
+  remain `0`. H0 remains `3` rows and was not modified.
+
 ## Local release-candidate verification
 
 - `pnpm install --frozen-lockfile`: lockfile current, no packages downloaded.
