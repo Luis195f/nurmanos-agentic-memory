@@ -1,8 +1,12 @@
 import type { APIGatewayProxyHandlerV2 } from "aws-lambda";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { ZodError } from "zod";
 
-import { agentRequestSchema, MAX_BODY_BYTES } from "../shared/contracts";
+import {
+  agentRequestSchema,
+  MAX_AGENT_DURATION_MS,
+  MAX_BODY_BYTES,
+} from "../shared/contracts";
 import { containsLikelyPersonalData } from "../shared/privacy";
 import { runAgent } from "./agent";
 import { AwsBedrockGateway } from "./bedrock";
@@ -11,6 +15,23 @@ import { CockroachMemoryDatabase } from "./database";
 const allowedOrigin = process.env.ALLOWED_ORIGIN;
 const bedrock = new AwsBedrockGateway();
 const database = new CockroachMemoryDatabase();
+
+async function withAgentDeadline<T>(operation: Promise<T>): Promise<T> {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      operation,
+      new Promise<never>((_, reject) => {
+        timeout = setTimeout(
+          () => reject(new Error("Agent execution deadline exceeded")),
+          MAX_AGENT_DURATION_MS,
+        );
+      }),
+    ]);
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
+}
 
 function response(statusCode: number, body: unknown) {
   return {
@@ -21,9 +42,15 @@ function response(statusCode: number, body: unknown) {
       "x-content-type-options": "nosniff",
       "content-security-policy": "default-src 'none'; frame-ancestors 'none'",
       "referrer-policy": "no-referrer",
+      "permissions-policy": "camera=(), microphone=(), geolocation=()",
+      "x-frame-options": "DENY",
     },
     body: JSON.stringify(body),
   };
+}
+
+function opaqueKeyHash(value: string): string {
+  return createHash("sha256").update(value).digest("hex").slice(0, 12);
 }
 
 export const handler: APIGatewayProxyHandlerV2 = async (event) => {
@@ -49,6 +76,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
   }
 
   try {
+    const startedAt = performance.now();
     const declaredLength = Number(event.headers["content-length"] ?? 0);
     if (declaredLength > MAX_BODY_BYTES || !event.body) {
       return response(413, {
@@ -73,14 +101,33 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
         requestId,
       });
     }
-    console.info(JSON.stringify({ event: "agent_request_started", requestId }));
-    const result = await runAgent(request, requestId, bedrock, database);
+    console.info(
+      JSON.stringify({
+        event: "agent_request_started",
+        requestId,
+        payloadBytes: Buffer.byteLength(decodedBody, "utf8"),
+      }),
+    );
+    const result = await withAgentDeadline(
+      runAgent(request, requestId, bedrock, database),
+    );
     console.info(
       JSON.stringify({
         event: "agent_request_completed",
         requestId,
         activityCount: result.events.length,
         memoryKeyCount: result.memoryKeys.length,
+        durationMs: Math.round(performance.now() - startedAt),
+        operations: result.events
+          .filter((item) => item.outcome)
+          .map((item) => ({
+            operation: item.operation,
+            outcome: item.outcome,
+            resultCount: item.resultCount,
+            durationMs: item.durationMs,
+            categories: item.categories,
+            memoryKeyHashes: item.memoryKeys?.map(opaqueKeyHash),
+          })),
       }),
     );
     return response(200, result);

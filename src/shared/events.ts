@@ -11,7 +11,7 @@ const SAFE_LABELS: Record<ActivityEvent["type"], string> = {
 
 export function activityEvent(
   type: ActivityEvent["type"],
-  details: Pick<ActivityEvent, "memoryKeys" | "dimensions"> = {},
+  details: Omit<ActivityEvent, "type" | "label"> = {},
 ): ActivityEvent {
   return { type, label: SAFE_LABELS[type], ...details };
 }
@@ -22,7 +22,18 @@ export function eventsContainOnlySanitizedFields(
   return events.every((event) => {
     const keys = Object.keys(event);
     return keys.every((key) =>
-      ["type", "label", "memoryKeys", "dimensions"].includes(key),
+      [
+        "type",
+        "label",
+        "operation",
+        "outcome",
+        "memoryKeys",
+        "categories",
+        "resultCount",
+        "similarities",
+        "durationMs",
+        "dimensions",
+      ].includes(key),
     );
   });
 }

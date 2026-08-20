@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   agentRequestSchema,
   retrieveMemoriesInputSchema,
+  retrieveMemoriesToolInputSchema,
   storeMemoryInputSchema,
+  storeMemoryToolInputSchema,
 } from "../src/shared/contracts";
 
 const sessionId = "00000000-0000-4000-8000-000000000201";
@@ -52,6 +54,21 @@ describe("strict request contracts", () => {
         content: "Protect an interruption-free handover period.",
         category: "handover",
         source: "unknown",
+      }),
+    ).toThrow();
+    expect(() =>
+      storeMemoryToolInputSchema.parse({
+        sessionId,
+        memoryKey: "handover-focus",
+        content: "Protect an interruption-free handover period.",
+        category: "handover",
+      }),
+    ).toThrow();
+    expect(() =>
+      retrieveMemoriesToolInputSchema.parse({
+        sessionId,
+        query: "What did we learn?",
+        limit: 1,
       }),
     ).toThrow();
     expect(() =>
