@@ -10,6 +10,8 @@ memory content, or raw provider responses.
 - Release branch: `codex/h1-agentic-memory-vertical-slice`.
 - H0 historical commit on `main`: `ce56ae5ccffb7c56b77e2e30a56b1e9bd0e5e21a`.
 - Safe H1 hardening checkpoint: `6f9970d`.
+- Local-demo implementation commit:
+  `77dfcea6eccaa99fc3af98fc3fcd3c69239d1ff0`.
 - License: MIT.
 
 ## Zero-cost runtime decision
