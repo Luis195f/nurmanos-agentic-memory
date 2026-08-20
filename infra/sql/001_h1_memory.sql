@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS public.h1_supervisor_memories (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   CONSTRAINT h1_session_memory_key_unique UNIQUE (session_id, memory_key),
-  CONSTRAINT h1_synthetic_only CHECK ((metadata->>'synthetic')::BOOL = true)
+  CONSTRAINT h1_synthetic_only CHECK (((metadata->>'synthetic')::BOOL) IS TRUE)
 );
 
 CREATE VECTOR INDEX IF NOT EXISTS h1_supervisor_memories_session_embedding_idx

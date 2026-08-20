@@ -1,8 +1,16 @@
 import { randomUUID } from "node:crypto";
 
-const apiBaseUrl = process.env.H1_API_BASE_URL;
+const apiBaseUrl = process.env.H1_API_BASE_URL?.replace(/\/$/, "");
+const frontendOrigin = process.env.H1_FRONTEND_ORIGIN;
 if (!apiBaseUrl || !apiBaseUrl.startsWith("https://")) {
   throw new Error("Set H1_API_BASE_URL to the deployed HTTPS API origin");
+}
+if (
+  !frontendOrigin ||
+  !frontendOrigin.startsWith("https://") ||
+  new URL(frontendOrigin).origin !== frontendOrigin
+) {
+  throw new Error("Set H1_FRONTEND_ORIGIN to the exact deployed HTTPS origin");
 }
 
 const sessionId = randomUUID();
@@ -13,7 +21,7 @@ async function agent(message) {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      origin: process.env.H1_FRONTEND_ORIGIN ?? "",
+      origin: frontendOrigin,
     },
     body: JSON.stringify({ sessionId, message, syntheticDataConfirmed: true }),
   });
